@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -256,6 +256,8 @@
 
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+
+  <script src="https://cdn.staticfile.net/translate.js/3.1.7/translate.js"></script>
   <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
   <script src="https://64071181.github.io/mokJsapi/a.js">//琪琪修改</script>
 
@@ -453,7 +455,11 @@
     </div>
   </div>
 
-
+    <div id="ContactAKI" class="ContactAKI"><!-- JS _顯示聯莫 --></div>
+    <div class="copyright">
+        <p class="mokJsApi_copyright">版權</p>
+    </div>
+    <div class="scroll-top" id="scrollTop" onclick="scrollToTop()">↑</div>
 
 
 
@@ -1089,11 +1095,7 @@ service cloud.firestore {
 
 
 
-    <div id="ContactAKI" class="ContactAKI"><!-- JS _顯示聯莫 --></div>
-    <div class="copyright">
-        <p class="mokJsApi_copyright">版權</p>
-    </div>
-    <div class="scroll-top" id="scrollTop" onclick="scrollToTop()">↑</div>
+
     <script>
 
         translate.service.use('client.edge'); //設置機器翻譯服務通道，直接客戶端本身，不依賴服務端 。相關說明參考 http://translate.zvo.cn/43086.html
