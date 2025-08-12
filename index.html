@@ -1,0 +1,1116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>預約系統</title>
+  <style>
+    /* 保持原有樣式不變 */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      color: #333;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      border-bottom: 1px solid #eee;
+      margin-bottom: 30px;
+    }
+
+    .company-info {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    #company-logo {
+      width: 80px;
+      height: 80px;
+      object-fit: contain;
+    }
+
+    .company-info a {
+      color: #2c3e50;
+      text-decoration: none;
+    }
+
+    .company-info a:hover {
+      text-decoration: underline;
+    }
+
+    .auth-buttons button {
+      margin-left: 10px;
+      padding: 8px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #3498db;
+      color: white;
+    }
+
+    .auth-buttons button:hover {
+      background: #2980b9;
+    }
+
+    .google-login-btn {
+      background-color: #4285F4 !important;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .google-login-btn img {
+      width: 18px;
+      height: 18px;
+    }
+
+    .date-selector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .date-selector button {
+      padding: 8px 16px;
+      background: #f1f1f1;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .slots-container {
+      margin: 0 auto;
+      max-width: 800px;
+    }
+
+    #slots-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    #slots-table th, #slots-table td {
+      padding: 12px;
+      text-align: center;
+      border: 1px solid #ddd;
+    }
+
+    #slots-table th {
+      background: #f8f9fa;
+    }
+
+    .slot-available {
+      background: #e3f2fd;
+      cursor: pointer;
+    }
+
+    .slot-unavailable {
+      background: #f5f5f5;
+      color: #999;
+    }
+
+    .slot-available:hover {
+      background: #bbdefb;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.5);
+    }
+
+    .modal-content {
+      background: white;
+      margin: 15% auto;
+      padding: 20px;
+      width: 70%;
+      max-width: 500px;
+      border-radius: 8px;
+      position: relative;
+    }
+
+    .close-modal {
+      position: absolute;
+      top: 10px;
+      right: 20px;
+      font-size: 28px;
+      cursor: pointer;
+    }
+
+    #booking-form {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    #booking-form input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    #booking-form button {
+      padding: 10px;
+      background: #2ecc71;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #admin-panel {
+      margin-top: 20px;
+      display: none;
+    }
+
+    .admin-section {
+      margin: 30px 0;
+      padding: 20px;
+      border: 1px solid #eee;
+      border-radius: 8px;
+    }
+
+    #slot-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    #slot-form input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    #save-slot {
+      padding: 8px 16px;
+      background: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      align-self: flex-end;
+    }
+
+    .admin-slots table, #records-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    .admin-slots th, .admin-slots td, #records-table th, #records-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+
+    .action-btn {
+      padding: 5px 10px;
+      margin: 0 5px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .edit-btn {
+      background: #3498db;
+      color: white;
+    }
+
+    .delete-btn {
+      background: #e74c3c;
+      color: white;
+    }
+    /* 在原有样式中添加 */
+    .copy-btn {
+      background: #f39c12; /* 橙色区分复制按钮 */
+      color: white;
+    }
+    .copy-btn:hover {
+      background: #e67e22; /* hover效果 */
+    }
+
+  </style>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+  <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+  <script src="https://64071181.github.io/mokJsapi/a.js">//琪琪修改</script>
+
+
+
+</head>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<body>
+  <p id="translate"></p>
+  <!-- 頂部導航 -->
+  <header>
+    <div class="company-info">
+      <img src="" alt="公司Logo" id="company-logo">
+      <div>
+        <h1 id="company-name">公司名稱</h1>
+        <p>
+          <a href="" target="_blank" id="company-address">公司地址</a> | 
+          <a href="" id="company-phone">聯繫電話</a>
+        </p>
+      </div>
+    </div>
+    <div class="auth-buttons">
+      <button id="login-btn" class="google-login-btn">
+        <i class="fab fa-google"></i> 登入
+      </button>
+      <button id="logout-btn" style="display:none">退出</button>
+      <button id="admin-btn" style="display:none">管理後臺</button>
+    </div>
+  </header>
+
+  <!-- 主內容區 -->
+  <main>
+    <!-- 日期選擇器 -->
+    <div class="date-selector">
+      <button id="prev-date">&lt;</button>
+      <h2 id="current-date"></h2>
+      <button id="next-date">&gt;</button>
+    </div>
+
+    <!-- 時段表格 -->
+    <div class="slots-container">
+      <table id="slots-table">
+        <thead>
+          <tr>
+            <th>時段</th>
+            <th>價格</th>
+            <th>剩餘名額</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="slots-body">
+          <!-- 時段數據將通過JS動態生成 -->
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- 預約彈窗 -->
+  <div id="booking-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-modal">×</span>
+      <h3>預約時段</h3>
+      <p id="selected-slot-info"></p>
+      <form id="booking-form">
+        <input type="hidden" id="slot-id">
+        <div>
+          <label for="name">姓名：</label>
+          <input type="text" id="name" required="">
+        </div>
+        <div>
+          <label for="phone">電話：</label>
+          <input type="tel" id="phone" required="">
+        </div>
+        <button type="submit">確認預約</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 管理員頁面 -->
+  <div id="admin-panel">
+    <h2>管理後臺</h2>
+    <button id="back-btn">返回首頁</button>
+    
+    <!-- 時段管理 -->
+    <div class="admin-section">
+      <h3>編輯可預約時段</h3>
+      <form id="slot-form">
+        <input type="hidden" id="edit-slot-id">
+        <div>
+          <label for="slot-date">日期：</label>
+          <input type="date" id="slot-date" required="">
+        </div>
+        <div>
+          <label for="slot-time">時間：</label>
+          <input type="time" id="slot-time" required="">
+        </div>
+        <div>
+          <label for="slot-price">價格：</label>
+          <input type="number" id="slot-price" min="0" required="">
+        </div>
+        <div>
+          <label for="slot-max">最大人數：</label>
+          <input type="number" id="slot-max" min="1" value="5" required="">
+        </div>
+        <button type="submit" id="save-slot">保存時段</button>
+      </form>
+      
+      <!-- 時段列表 -->
+      <div class="admin-slots">
+        <h4>現有時段</h4>
+        <table id="admin-slots-table">
+          <thead>
+            <tr>
+              <th>日期</th>
+              <th>時間</th>
+              <th>價格</th>
+              <th>最大人數</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="admin-slots-body">
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 預約記錄查詢 -->
+    <div class="admin-section">
+      <h3>預約記錄查詢</h3>
+      <select id="record-filter">
+        <option value="day">今日</option>
+        <option value="month">本月</option>
+        <option value="year">今年</option>
+      </select>
+      <table id="records-table">
+        <thead>
+          <tr>
+            <th>日期</th>
+            <th>時間</th>
+            <th>姓名</th>
+            <th>電話</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="records-body">
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  <script>
+    // Firebase 配置（請替換為你的實際配置）
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTkeDPWcaFnkW5tAZGw7VSRErgzYxA-jE",
+      authDomain: "bookingsys-57530.firebaseapp.com",
+      projectId: "bookingsys-57530",
+      storageBucket: "bookingsys-57530.firebasestorage.app",
+      messagingSenderId: "490656093093",
+      appId: "1:490656093093:web:886418bbef4a2169514e4c",
+      measurementId: "G-VM9F2DXGSK"
+    };
+
+    // 初始化 Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // 全局變量
+    let currentUser = null;
+    let currentDate = new Date();
+    let selectedSlotId = null;
+
+    // DOM 元素
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const adminBtn = document.getElementById('admin-btn');
+    const adminPanel = document.getElementById('admin-panel');
+    const backBtn = document.getElementById('back-btn');
+    const currentDateEl = document.getElementById('current-date');
+    const slotsBody = document.getElementById('slots-body');
+    const bookingModal = document.getElementById('booking-modal');
+    const bookingForm = document.getElementById('booking-form');
+    const slotIdInput = document.getElementById('slot-id');
+    const selectedSlotInfo = document.getElementById('selected-slot-info');
+    const companyNameEl = document.getElementById('company-name');
+    const companyLogoEl = document.getElementById('company-logo');
+    const companyAddressEl = document.getElementById('company-address');
+    const companyPhoneEl = document.getElementById('company-phone');
+
+
+
+
+
+
+
+// 設置編輯時段表單的默認日期和時間為今日現在
+function setDefaultSlotDateTime() {
+  const now = new Date(); // 獲取當前時間
+  
+  // 格式化日期為 YYYY-MM-DD（符合 input[type="date"] 要求）
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0'); // 月份從 0 開始，需 +1 並補零
+  const day = String(now.getDate()).padStart(2, '0');
+  const defaultDate = `${year}-${month}-${day}`;
+  
+  // 格式化時間為 HH:MM（符合 input[type="time"] 要求）
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const defaultTime = `${hours}:${minutes}`;
+  
+  // 設置表單默認值
+  document.getElementById('slot-date').value = defaultDate;
+  document.getElementById('slot-time').value = defaultTime;
+
+  // 新增：讀取本地存儲的上次價格並填充
+  const lastPrice = localStorage.getItem('lastSlotPrice');
+  if (lastPrice !== null) { // 如果存在上次價格
+    document.getElementById('slot-price').value = lastPrice; // 填充到輸入框
+  }
+  // 如果沒有上次價格，保持原有默認值（如 <input value="5">）
+}
+
+
+
+
+
+
+    // 初始化頁面
+    function initApp() {
+      // 監聽登錄狀態
+      auth.onAuthStateChanged(user => {
+        if (user) {
+          currentUser = user;
+          loginBtn.style.display = 'none';
+          logoutBtn.style.display = 'inline-block';
+          checkUserRole(); // 檢查用戶角色
+          loadCompanySettings();
+          loadSlots();
+        } else {
+          currentUser = null;
+          loginBtn.style.display = 'inline-block';
+          logoutBtn.style.display = 'none';
+          adminBtn.style.display = 'none';
+          adminPanel.style.display = 'none';
+          loadCompanySettings();
+          loadSlots();
+        }
+      });
+
+      // 日期切換
+      document.getElementById('prev-date').addEventListener('click', () => {
+        currentDate.setDate(currentDate.getDate() - 1);
+        loadSlots();
+      });
+      document.getElementById('next-date').addEventListener('click', () => {
+        currentDate.setDate(currentDate.getDate() + 1);
+        loadSlots();
+      });
+
+      // Google登錄
+      loginBtn.addEventListener('click', () => {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({
+          prompt: 'select_account'
+        });
+        auth.signInWithPopup(provider)
+          .catch(err => alert('登錄失敗：' + err.message));
+      });
+
+      logoutBtn.addEventListener('click', () => {
+        auth.signOut();
+      });
+
+      // 新增：頁面加載時設置編輯時段表單的默認日期和時間
+      setDefaultSlotDateTime();
+
+      adminBtn.addEventListener('click', () => {
+        document.querySelector('main').style.display = 'none';
+        adminPanel.style.display = 'block';
+        loadAdminSlots();
+        loadRecords('day');
+      });
+
+      backBtn.addEventListener('click', () => {
+        document.querySelector('main').style.display = 'block';
+        adminPanel.style.display = 'none';
+      });
+
+      bookingForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (!currentUser) {
+          alert('請先登錄');
+          return;
+        }
+
+        const name = document.getElementById('name').value;
+        const phone = document.getElementById('phone').value;
+        
+        db.collection('appointments').add({
+
+
+
+          slotId: selectedSlotId,
+          userId: firebase.auth().currentUser.uid, // 必須與登錄用戶uid一致
+          name,
+          phone,
+          createdAt: firebase.firestore.Timestamp.now()
+        }).then(() => {
+          db.collection('slots').doc(selectedSlotId).update({
+            currentUsers: firebase.firestore.FieldValue.increment(1)
+            
+          }).then(() => {
+            alert('預約成功！');
+            bookingModal.style.display = 'none';
+            bookingForm.reset();
+            sendWhatsappNotification(name, phone);
+            loadSlots();
+          });
+        }).catch(err => alert('預約失敗：' + err.message));
+      });
+
+      document.getElementById('slot-form').addEventListener('submit', (e) => {
+        e.preventDefault();
+        const slotId = document.getElementById('edit-slot-id').value;
+        const date = document.getElementById('slot-date').value;
+        const time = document.getElementById('slot-time').value;
+        const price = Number(document.getElementById('slot-price').value);
+        const maxUsers = Number(document.getElementById('slot-max').value);
+
+        // 新增：保存價格到本地存儲（鍵名為 lastSlotPrice）
+        localStorage.setItem('lastSlotPrice', price); // 存儲數值類型
+
+        const slotData = { date, time, price, maxUsers, currentUsers: 0, isActive: true };
+
+        if (slotId) {
+          db.collection('slots').doc(slotId).update(slotData)
+            .then(() => alert('更新成功'));
+        } else {
+          db.collection('slots').add(slotData)
+            .then(() => alert('創建成功'));
+        }
+
+        document.getElementById('slot-form').reset();
+        document.getElementById('edit-slot-id').value = '';
+        loadAdminSlots();
+      });
+
+      document.getElementById('record-filter').addEventListener('change', (e) => {
+        loadRecords(e.target.value);
+      });
+    }
+
+    // 修復的用戶角色檢查函數 - 確保只有第一個用戶成為管理員
+function checkUserRole() {
+  if (!currentUser) return;
+
+  // 步驟1：先檢查當前用戶是否已存在
+  db.collection('users').doc(currentUser.uid).get()
+    .then(userDoc => {
+      if (userDoc.exists) {
+        // 用戶已存在，直接讀取自己的角色
+        const role = userDoc.data().role;
+        adminBtn.style.display = role === 'admin' ? 'inline-block' : 'none';
+        return;
+      }
+
+      // 步驟2：查詢用戶集合數量（僅判斷是否為空，不讀取具體數據）
+      db.collection('users').limit(1).get() // 只查1條，判斷是否為空
+        .then(usersSnapshot => {
+          // 判斷是否為第一個用戶（集合為空）
+          const isFirstUser = usersSnapshot.empty;
+          const userRole = isFirstUser ? 'admin' : 'user';
+
+          // 步驟3：創建當前用戶的記錄
+          db.collection('users').doc(currentUser.uid).set({
+            email: currentUser.email,
+            name: currentUser.displayName,
+            role: userRole,
+            createdAt: firebase.firestore.Timestamp.now()
+          })
+          .then(() => {
+            adminBtn.style.display = userRole === 'admin' ? 'inline-block' : 'none';
+            if (isFirstUser) {
+              alert('恭喜！您是第一個用戶，已自動成為管理員。');
+            }
+          })
+          .catch(err => {
+            console.error('創建用戶記錄失敗:', err);
+            alert('設置用戶角色時出錯: ' + err.message);
+          });
+        })
+        .catch(err => {
+          console.error('查詢用戶數量失敗:', err);
+          alert('檢查用戶數量時出錯: ' + err.message);
+        });
+    })
+    .catch(err => {
+      console.error('獲取當前用戶信息失敗:', err);
+      alert('獲取用戶信息時出錯: ' + err.message);
+    });
+}
+
+
+
+
+
+
+    // 加載可預約時段
+    function loadSlots() {
+      const dateStr = currentDate.toISOString().split('T')[0];
+      currentDateEl.textContent = dateStr;
+      slotsBody.innerHTML = '';
+
+      db.collection('slots').where('date', '==', dateStr).get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            slotsBody.innerHTML = '<tr><td colspan="4">暫無可用時段</td></tr>';
+            return;
+          }
+
+          snapshot.forEach(doc => {
+            const slot = doc.data();
+            const isAvailable = slot.currentUsers < slot.maxUsers && slot.isActive;
+            const row = document.createElement('tr');
+            row.className = isAvailable ? 'slot-available' : 'slot-unavailable';
+            
+            row.innerHTML = `
+              <td>${slot.time}</td>
+              <td>${slot.price}元</td>
+              <td>${slot.maxUsers - slot.currentUsers}/${slot.maxUsers}</td>
+              <td>
+                ${isAvailable ? 
+                  `<button class="book-btn" data-id="${doc.id}" data-time="${slot.time}" data-price="${slot.price}">預約</button>` : 
+                  '已滿'}
+              </td>
+            `;
+            slotsBody.appendChild(row);
+          });
+
+          document.querySelectorAll('.book-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              if (!currentUser) {
+                alert('請先登錄');
+                return;
+              }
+              selectedSlotId = btn.getAttribute('data-id');
+              slotIdInput.value = selectedSlotId;
+              selectedSlotInfo.textContent = `時段：${btn.getAttribute('data-time')}，價格：${btn.getAttribute('data-price')}元`;
+              bookingModal.style.display = 'block';
+            });
+          });
+        });
+    }
+
+    // 其他函數保持不變...
+    function loadAdminSlots() {
+      console.log('開始加載時段數據...'); // 添加日誌
+      const adminSlotsBody = document.getElementById('admin-slots-body');
+      adminSlotsBody.innerHTML = '';
+
+      db.collection('slots').orderBy('date').orderBy('time').get()
+        .then(snapshot => {
+          console.log('查詢到的時段數量：', snapshot.size); // 查看是否有數據
+          snapshot.forEach(doc => {
+            const slot = doc.data();
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td>${slot.date}</td>
+              <td>${slot.time}</td>
+              <td>${slot.price}元</td>
+              <td>${slot.maxUsers}</td>
+              <td>
+                <button class="action-btn edit-btn" data-id="${doc.id}">編輯</button>
+                <button class="action-btn delete-btn" data-id="${doc.id}">刪除</button>
+                <button class="action-btn copy-btn" data-id="${doc.id}">复制</button>
+              </td>
+            `;
+            adminSlotsBody.appendChild(row);
+          });
+
+          // 绑定复制按钮事件（新增）
+          document.querySelectorAll('.copy-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const slotId = btn.getAttribute('data-id');
+              copySlot(slotId); // 调用复制逻辑
+            });
+          });
+
+          document.querySelectorAll('.edit-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              const slotId = btn.getAttribute('data-id');
+              db.collection('slots').doc(slotId).get()
+                .then(doc => {
+                  const slot = doc.data();
+                  document.getElementById('edit-slot-id').value = slotId;
+                  document.getElementById('slot-date').value = slot.date;
+                  document.getElementById('slot-time').value = slot.time;
+
+                  document.getElementById('slot-price').value = slot.price;
+                  document.getElementById('slot-max').value = slot.maxUsers;
+                });
+            });
+          });
+
+          document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+              if (confirm('確定刪除該時段？')) {
+                db.collection('slots').doc(btn.getAttribute('data-id')).delete()
+                  .then(() => loadAdminSlots());
+              }
+            });
+          });
+            })
+    .catch(err => {
+      console.error('加載時段失敗：', err); // 添加錯誤捕獲
+    });
+    }
+
+  // 复制时段数据到表单
+  function copySlot(slotId) {
+    db.collection('slots').doc(slotId).get()
+      .then(doc => {
+        if (!doc.exists) {
+          alert('时段数据不存在');
+          return;
+        }
+        const slot = doc.data();
+        
+        // 清空编辑ID（确保复制后保存为新时段，而非更新原时段）
+        document.getElementById('edit-slot-id').value = '';
+        
+        // 填充原时段数据到表单
+        document.getElementById('slot-date').value = slot.date;
+        document.getElementById('slot-time').value = slot.time;
+        document.getElementById('slot-price').value = slot.price;
+        document.getElementById('slot-max').value = slot.maxUsers;
+        
+        // 可选：自动滚动到表单位置，方便修改
+        document.getElementById('slot-form').scrollIntoView({ behavior: 'smooth' });
+        
+        alert('已复制时段数据，请修改后保存');
+      })
+      .catch(err => {
+        console.error('复制时段失败：', err.message);
+        alert('复制失败：' + err.message);
+      });
+  }
+
+
+    function loadRecords(filter) {
+      const recordsBody = document.getElementById('records-body');
+      recordsBody.innerHTML = '';
+      let startDate, endDate;
+
+      if (filter === 'day') {
+        startDate = new Date();
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setHours(23, 59, 59, 999);
+      } else if (filter === 'month') {
+        startDate = new Date();
+        startDate.setDate(1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1);
+        endDate.setDate(0);
+        endDate.setHours(23, 59, 59, 999);
+      } else if (filter === 'year') {
+        startDate = new Date();
+        startDate.setMonth(0, 1);
+        startDate.setHours(0, 0, 0, 0);
+        endDate = new Date();
+        endDate.setMonth(11, 31);
+        endDate.setHours(23, 59, 59, 999);
+      }
+
+      db.collection('appointments')
+        .where('createdAt', '>=', firebase.firestore.Timestamp.fromDate(startDate))
+        .where('createdAt', '<=', firebase.firestore.Timestamp.fromDate(endDate))
+        .orderBy('createdAt', 'desc')
+        .get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            recordsBody.innerHTML = '<tr><td colspan="5">暫無記錄</td></tr>';
+            return;
+          }
+
+          snapshot.forEach(doc => {
+            const appointment = doc.data();
+            db.collection('slots').doc(appointment.slotId).get()
+              .then(slotDoc => {
+                const slot = slotDoc.data();
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td>${slot.date}</td>
+                  <td>${slot.time}</td>
+                  <td>${appointment.name}</td>
+                  <td>${appointment.phone}</td>
+                  <td>
+                    <button class="action-btn delete-btn" data-id="${doc.id}" data-slotid="${appointment.slotId}">刪除</button>
+                  </td>
+                `;
+                recordsBody.appendChild(row);
+
+                row.querySelector('.delete-btn').addEventListener('click', (e) => {
+                  if (confirm('確定刪除該預約？')) {
+                    const slotId = e.target.getAttribute('data-slotid');
+                    db.collection('slots').doc(slotId).update({
+                      currentUsers: firebase.firestore.FieldValue.increment(-1)
+                    }).then(() => {
+                      db.collection('appointments').doc(doc.id).delete()
+                        .then(() => loadRecords(filter));
+                    });
+                  }
+                });
+              });
+          });
+        });
+    }
+
+    function loadCompanySettings() {
+      db.collection('settings').doc('company').get()
+        .then(doc => {
+          if (doc.exists) {
+            const settings = doc.data();
+            companyNameEl.textContent = settings.companyName || '公司名稱';
+            companyLogoEl.src = settings.logo || '';
+            companyAddressEl.textContent = settings.address || '公司地址';
+            companyAddressEl.href = `https://www.google.com/maps/place/${settings.address}`;
+            companyPhoneEl.textContent = settings.phone || '聯繫電話';
+            companyPhoneEl.href = `https://wa.me/${settings.phone}?text=你好，我想查詢`;
+          } else {
+            db.collection('settings').doc('company').set({
+              companyName: '莫氏髮型',
+              logo: 'https://z.wiki/u/MQQHJO',
+              address: '大角咀',
+              phone: '98672794'
+            });
+          }
+        });
+    }
+
+    function sendWhatsappNotification(name, phone) {
+      db.collection('settings').doc('company').get()
+        .then(doc => {
+          const adminPhone = doc.data().phone;
+          const message = `新預約通知：姓名 ${name}，電話 ${phone}，時段 ${selectedSlotInfo.textContent}`;
+          const encodedMsg = encodeURIComponent(message);
+          window.open(`https://wa.me/${adminPhone}?text=${encodedMsg}`, '_blank');
+        });
+    }
+
+    document.querySelector('.close-modal').addEventListener('click', () => {
+      bookingModal.style.display = 'none';
+    });
+
+    window.onload = initApp;
+
+
+
+
+
+
+
+
+
+
+
+
+
+    /*
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 用戶集合規則
+    match /users/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create: if request.auth != null && request.auth.uid == uid;
+      allow update: if isAdmin();
+    }
+
+    // 合併重複的用戶集合查詢規則（原代碼有兩個重複塊）
+    match /users/{uid=**} {
+      allow list: if request.auth != null;
+    }
+
+    // 調整 slots 規則：允許普通用戶更新 currentUsers（僅增加）
+    match /slots/{slotId} {
+      allow read: if true;
+      // 管理員可執行所有操作；普通用戶僅允許增加 currentUsers（且不修改其他字段）
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || (
+        request.auth != null &&
+        // 確保僅增加 currentUsers（預約時人數+1）
+        request.resource.data.currentUsers == resource.data.currentUsers + 1 &&
+        // 確保其他字段未被篡改（日期、時間、價格等不變）
+        request.resource.data.date == resource.data.date &&
+        request.resource.data.time == resource.data.time &&
+        request.resource.data.price == resource.data.price &&
+        request.resource.data.maxUsers == resource.data.maxUsers &&
+        request.resource.data.isActive == resource.data.isActive
+      );
+    }
+
+    match /appointments/{appointmentId} {
+      allow read: if request.auth != null && (isAdmin() || resource.data.userId == request.auth.uid);
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    match /settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 管理員判斷函數
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin";
+    }
+  }
+}
+
+    */
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+    <div id="ContactAKI" class="ContactAKI"><!-- JS _顯示聯莫 --></div>
+    <div class="copyright">
+        <p class="mokJsApi_copyright">版權</p>
+    </div>
+    <div class="scroll-top" id="scrollTop" onclick="scrollToTop()">↑</div>
+    <script>
+
+        translate.service.use('client.edge'); //設置機器翻譯服務通道，直接客戶端本身，不依賴服務端 。相關說明參考 http://translate.zvo.cn/43086.html
+        translate.execute();//進行翻譯 
+
+
+        function Start() {
+            // 顯示聯莫
+            const 聯莫 = ['moksurky@gmail.com','https://wa.me/85264071181/','https://i.meee.com.tw/atcX6QM.png','https://www.instagram.com/moksurky2025/','https://line.me/ti/p/UlSPd7p9zh/','https://www.facebook.com/aki.mok.10/','http://t.me/mokaki/','https://github.com/GoldComeHK/GoldComeHK.github.io'
+            ];
+            _顯示聯莫(聯莫);
+        }
+        琪琪修改('https://64071181.github.io/')
+
+
+
+
+    </script>
+</body>
+</html>
