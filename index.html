@@ -361,6 +361,29 @@
       </table>
     </div>
   </main>
+  <!-- 廣告區塊 -->
+  <div id="ads-container" style="margin: 30px 0; display: flex; flex-wrap: wrap; gap: 20px;"></div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
   <!-- 預約彈窗 -->
   <div id="booking-modal" class="modal">
@@ -453,6 +476,17 @@
         </tbody>
       </table>
     </div>
+
+      <!-- 廣告管理 -->
+      <div class="admin-section">
+        <h3>廣告管理</h3>
+        <form id="ads-form">
+          <label for="ads-count">廣告數量：</label>
+          <input type="number" id="ads-count" min="1" value="1" style="width:60px;">
+          <div id="ads-fields"></div>
+          <button type="submit">保存廣告</button>
+        </form>
+      </div>
   </div>
 
     <div id="ContactAKI" class="ContactAKI"><!-- JS _顯示聯莫 --></div>
@@ -1011,7 +1045,81 @@ function checkUserRole() {
       bookingModal.style.display = 'none';
     });
 
-    window.onload = initApp;
+    // 廣告管理功能
+    function renderAdsFields(count, adsData = []) {
+      const adsFields = document.getElementById('ads-fields');
+      adsFields.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const img = adsData[i]?.img || '';
+        const url = adsData[i]?.url || '';
+        adsFields.innerHTML += `
+          <div style="margin-bottom:10px;">
+            <label>圖片網址：</label>
+            <input type="text" name="ad-img-${i}" value="${img}" style="width:250px;">
+            <label>外部連結：</label>
+            <input type="text" name="ad-url-${i}" value="${url}" style="width:250px;">
+          </div>
+        `;
+      }
+    }
+
+    function loadAdsSettings() {
+      db.collection('settings').doc('ads').get().then(doc => {
+        let ads = [];
+        if (doc.exists) {
+          ads = doc.data().ads || [];
+        }
+        const adsCount = ads.length || 1;
+        document.getElementById('ads-count').value = adsCount;
+        renderAdsFields(adsCount, ads);
+        renderAds(ads);
+      });
+    }
+
+    function renderAds(ads) {
+      const adsContainer = document.getElementById('ads-container');
+      adsContainer.innerHTML = '';
+      ads.forEach(ad => {
+        if (ad.img && ad.url) {
+          adsContainer.innerHTML += `
+            <a href="${ad.url}" target="_blank" style="display:inline-block;">
+              <img src="${ad.img}" alt="廣告" style="width:220px; height:120px; object-fit:cover; border-radius:8px; box-shadow:0 2px 8px #ccc;">
+            </a>
+          `;
+        }
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const adsCountInput = document.getElementById('ads-count');
+      adsCountInput.addEventListener('change', () => {
+        const count = Number(adsCountInput.value);
+        renderAdsFields(count);
+      });
+      loadAdsSettings();
+    });
+
+    document.getElementById('ads-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const count = Number(document.getElementById('ads-count').value);
+      const ads = [];
+      for (let i = 0; i < count; i++) {
+        const img = document.querySelector(`[name='ad-img-${i}']`).value.trim();
+        const url = document.querySelector(`[name='ad-url-${i}']`).value.trim();
+        ads.push({ img, url });
+      }
+      db.collection('settings').doc('ads').set({ ads }).then(() => {
+        alert('廣告已保存');
+        renderAds(ads);
+      });
+    });
+
+    // 初始化時載入廣告
+    function initAppWithAds() {
+      initApp();
+      loadAdsSettings();
+    }
+    window.onload = initAppWithAds;
 
 
 
