@@ -607,6 +607,7 @@
   <button class="admin-nav-btn" data-target="slot-section">時段管理</button>
   <button class="admin-nav-btn" data-target="record-section">預約記錄查詢</button>
   <button class="admin-nav-btn" data-target="ads-section">廣告管理</button>
+  <button class="admin-nav-btn" data-target="user-section">會員管理</button>
     </div>
 
     <!-- 公司資訊管理 -->
@@ -744,6 +745,46 @@
         </form>
       </div>
   </div>
+
+
+
+  <!-- 在管理面板中添加会员管理区块 -->
+  <div class="admin-section" id="user-section">
+    <h3>會員管理</h3>
+    <div style="margin-bottom: 15px;">
+      <label for="user-filter">篩選：</label>
+      <select id="user-filter">
+        <option value="all">所有會員</option>
+        <option value="admin">管理員</option>
+        <option value="user">一般會員</option>
+      </select>
+    </div>
+    <table id="users-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>姓名</th>
+          <th>電子郵件</th>
+          <th>角色</th>
+          <th>註冊日期</th>
+          <th>最後登入</th>
+          <th>操作</th>
+        </tr>
+      </thead>
+      <tbody id="users-body">
+        <!-- 会员数据将通过JS动态生成 -->
+      </tbody>
+    </table>
+  </div>
+
+
+
+
+
+
+
+
+
 
     <div id="ContactAKI" class="ContactAKI"><!-- JS _顯示聯莫 --></div>
     <div class="copyright">
@@ -1014,7 +1055,140 @@ function setDefaultSlotDateTime() {
         adminSlotsFilterDate.value = '';
         loadAdminSlots();
       });
+
+
+
+
+
+  // 会员管理筛选
+  document.getElementById('user-filter').addEventListener('change', function() {
+    loadUsers(this.value);
+  });
+
+  // 在进入后台时加载会员数据
+  adminBtn.addEventListener('click', () => {
+    document.querySelector('main').style.display = 'none';
+    adminPanel.style.display = 'block';
+    loadAdminSlots();
+    loadRecords('day');
+    loadAdminCompanyForm();
+    loadUsers('all'); // 添加这行加载会员数据
+  });  
     }
+
+// 加载会员数据
+function loadUsers(filter = 'all') {
+  const usersBody = document.getElementById('users-body');
+  usersBody.innerHTML = '<tr><td colspan="7">載入中...</td></tr>';
+  
+  let query = db.collection('users');
+  
+  if (filter === 'admin') {
+    query = query.where('role', '==', 'admin');
+  } else if (filter === 'user') {
+    query = query.where('role', '==', 'user');
+  }
+  
+  query.orderBy('createdAt', 'desc').get()
+    .then(snapshot => {
+      usersBody.innerHTML = '';
+      
+      if (snapshot.empty) {
+        usersBody.innerHTML = '<tr><td colspan="7">暫無會員資料</td></tr>';
+        return;
+      }
+      
+      snapshot.forEach(doc => {
+        const user = doc.data();
+        const createdAt = user.createdAt ? user.createdAt.toDate().toLocaleString() : '未知';
+        const lastLogin = user.lastLogin ? user.lastLogin.toDate().toLocaleString() : '未知';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${doc.id.substring(0, 8)}</td>
+          <td>${user.name || '-'}</td>
+          <td>${user.email || '-'}</td>
+          <td>
+            <select class="user-role" data-id="${doc.id}" ${user.uid === currentUser?.uid ? 'disabled' : ''}>
+              <option value="user" ${user.role === 'user' ? 'selected' : ''}>一般會員</option>
+              <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>管理員</option>
+            </select>
+          </td>
+          <td>${createdAt}</td>
+          <td>${lastLogin}</td>
+          <td>
+            <button class="action-btn delete-btn" data-id="${doc.id}" 
+                    ${user.uid === currentUser?.uid ? 'disabled' : ''}>
+              刪除
+            </button>
+          </td>
+        `;
+        usersBody.appendChild(row);
+      });
+      
+      // 添加角色变更事件监听
+      document.querySelectorAll('.user-role').forEach(select => {
+        select.addEventListener('change', function() {
+          const userId = this.getAttribute('data-id');
+          const newRole = this.value;
+          updateUserRole(userId, newRole);
+        });
+      });
+      
+      // 添加删除事件监听
+      document.querySelectorAll('#users-body .delete-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+          const userId = this.getAttribute('data-id');
+          if (confirm('確定要刪除此會員嗎？此操作無法復原！')) {
+            deleteUser(userId);
+          }
+        });
+      });
+    })
+    .catch(err => {
+      console.error('加載會員失敗:', err);
+      usersBody.innerHTML = '<tr><td colspan="7">載入失敗</td></tr>';
+    });
+}
+
+
+
+
+
+// 更新用户角色
+function updateUserRole(userId, newRole) {
+  db.collection('users').doc(userId).update({ role: newRole })
+    .then(() => {
+      alert('會員角色已更新');
+      // 如果修改的是当前用户，刷新页面
+      if (userId === currentUser?.uid) {
+        location.reload();
+      }
+    })
+    .catch(err => {
+      console.error('更新角色失敗:', err);
+      alert('更新失敗: ' + err.message);
+    });
+}
+
+// 删除用户
+function deleteUser(userId) {
+  db.collection('users').doc(userId).delete()
+    .then(() => {
+      alert('會員已刪除');
+      loadUsers(document.getElementById('user-filter').value);
+    })
+    .catch(err => {
+      console.error('刪除會員失敗:', err);
+      alert('刪除失敗: ' + err.message);
+    });
+}
+
+
+
+
+
+
 
     // 修復的用戶角色檢查函數 - 確保只有第一個用戶成為管理員
 function checkUserRole() {
