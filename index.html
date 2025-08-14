@@ -1536,22 +1536,28 @@ function checkUserRole() {
     });
 
     // 廣告管理功能
-    function renderAdsFields(count, adsData = []) {
-      const adsFields = document.getElementById('ads-fields');
-      adsFields.innerHTML = '';
-      for (let i = 0; i < count; i++) {
-        const img = adsData[i]?.img || '';
-        const url = adsData[i]?.url || '';
-        adsFields.innerHTML += `
-          <div style="margin-bottom:10px;">
-            <label>圖片網址：</label>
-            <input type="text" name="ad-img-${i}" value="${img}" style="width:250px;">
-            <label>外部連結：</label>
-            <input type="text" name="ad-url-${i}" value="${url}" style="width:250px;">
-          </div>
-        `;
-      }
-    }
+function renderAdsFields(count, adsData = []) {
+  const adsFields = document.getElementById('ads-fields');
+  adsFields.innerHTML = '';
+  
+  for (let i = 0; i < count; i++) {
+    // 优先使用传入的数据，如果没有则尝试从全局变量获取
+    const img = i < adsData.length ? adsData[i].img : 
+               (i < currentAdsData.length ? currentAdsData[i].img : '');
+               
+    const url = i < adsData.length ? adsData[i].url : 
+               (i < currentAdsData.length ? currentAdsData[i].url : '');
+    
+    adsFields.innerHTML += `
+      <div style="margin-bottom:10px;">
+        <label>廣告 ${i+1} 圖片網址：</label>
+        <input type="text" name="ad-img-${i}" value="${img}" style="width:250px;" placeholder="https://example.com/image.jpg">
+        <label>廣告 ${i+1} 外部連結：</label>
+        <input type="text" name="ad-url-${i}" value="${url}" style="width:250px;" placeholder="https://example.com">
+      </div>
+    `;
+  }
+}
 
     // 公司資訊管理功能
     function loadAdminCompanyForm() {
@@ -1599,15 +1605,24 @@ function checkUserRole() {
       }
     }
 
+
+// 修改：加载广告设置时保存数据到全局变量
+let currentAdsData = [];
     function loadAdsSettings() {
       db.collection('settings').doc('ads').get().then(doc => {
         let ads = [];
         if (doc.exists) {
           ads = doc.data().ads || [];
         }
+
+        // 保存到全局变量
+        currentAdsData = [...ads];        
+            
         const adsCount = ads.length || 1;
         document.getElementById('ads-count').value = adsCount;
-        renderAdsFields(adsCount, ads);
+        
+        //renderAdsFields(adsCount, ads);
+        renderAdsFields(adsCount, currentAdsData);
         renderAds(ads);
       });
     }
@@ -1626,29 +1641,65 @@ function checkUserRole() {
       });
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      const adsCountInput = document.getElementById('ads-count');
-      adsCountInput.addEventListener('change', () => {
-        const count = Number(adsCountInput.value);
-        renderAdsFields(count);
-      });
-      loadAdsSettings();
-    });
-
-    document.getElementById('ads-form').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const count = Number(document.getElementById('ads-count').value);
-      const ads = [];
-      for (let i = 0; i < count; i++) {
-        const img = document.querySelector(`[name='ad-img-${i}']`).value.trim();
-        const url = document.querySelector(`[name='ad-url-${i}']`).value.trim();
-        ads.push({ img, url });
+document.addEventListener('DOMContentLoaded', () => {
+  const adsCountInput = document.getElementById('ads-count');
+  adsCountInput.addEventListener('change', () => {
+    const count = Number(adsCountInput.value);
+    
+    // 收集当前表单中的所有广告数据
+    const currentFormData = [];
+    for (let i = 0; i < currentAdsData.length; i++) {
+      const imgInput = document.querySelector(`[name='ad-img-${i}']`);
+      const urlInput = document.querySelector(`[name='ad-url-${i}']`);
+      
+      if (imgInput && urlInput) {
+        currentFormData.push({
+          img: imgInput.value.trim(),
+          url: urlInput.value.trim()
+        });
       }
-      db.collection('settings').doc('ads').set({ ads }).then(() => {
-        alert('廣告已保存');
-        renderAds(ads);
-      });
+    }
+    
+    // 合并全局数据和表单数据（优先使用表单数据）
+    const mergedData = currentAdsData.map((ad, index) => {
+      if (index < currentFormData.length) {
+        return {
+          img: currentFormData[index].img || ad.img,
+          url: currentFormData[index].url || ad.url
+        };
+      }
+      return ad;
     });
+    
+    // 更新全局数据
+    currentAdsData = [...mergedData];
+    
+    // 渲染新数量的字段，保留已有数据
+    renderAdsFields(count, currentAdsData);
+  });
+  
+  loadAdsSettings();
+});
+
+document.getElementById('ads-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const count = Number(document.getElementById('ads-count').value);
+  const ads = [];
+  
+  for (let i = 0; i < count; i++) {
+    const img = document.querySelector(`[name='ad-img-${i}']`).value.trim();
+    const url = document.querySelector(`[name='ad-url-${i}']`).value.trim();
+    ads.push({ img, url });
+  }
+  
+  // 更新全局数据
+  currentAdsData = [...ads];
+  
+  db.collection('settings').doc('ads').set({ ads }).then(() => {
+    alert('廣告已保存');
+    renderAds(ads);
+  });
+});
 
     // 初始化時載入廣告
     function initAppWithAds() {
